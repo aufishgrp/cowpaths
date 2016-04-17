@@ -45,7 +45,7 @@ Within a socket/HostMatch pairing PathMatch specs must be unique. In the event t
 ###Detach from a socket
 Removes all Routes for App from all sockets.
 
-    cowpaths:detach(App)
+    cowpaths:detach(App).
 
 ###Check Configuration
 Returns the configuration as it is passed to Cowboy.
