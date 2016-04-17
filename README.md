@@ -1,4 +1,4 @@
-#httpaths
+#cowpaths
 
 Application that manages configuration of Cowboy.
 
@@ -7,7 +7,7 @@ Allows multiple applications to use a socket(s) without steppig on each others t
 ##Usage
 Start the application.
     
-    applicaiton:start(httpaths).
+    applicaiton:start(cowpaths).
     
 ###Create a socket to listen for requests
 
@@ -22,7 +22,7 @@ Start the application.
         workers => integer()            :: The number of socket acceptors to use. Default 50
     }
     
-    httpaths:socket(SocketSpec).
+    cowpaths:socket(SocketSpec).
     
 {ok, Socket} is returned when a socket is created. {exists, Socket} is returned when the port to use is already being managed.
     
@@ -34,7 +34,7 @@ Attach a HostTable to a series of sockets.
                                    calling cowpaths:socket(SocketSpec) or the atom all. If all is passed
                                    the rules are applied to all 
     Routes = [] :: Cowboy routes as described here: http://ninenines.eu/docs/en/cowboy/1.0/guide/routing/
-    httpaths:attach(App, Sockets, Routes).
+    cowpaths:attach(App, Sockets, Routes).
     
 RouteTables are maintained on a per socket basis.
     
@@ -45,12 +45,12 @@ Within a socket/HostMatch pairing PathMatch specs must be unique. In the event t
 ###Detach from a socket
 Removes all Routes for App from all sockets.
 
-    httpaths:detach(App)
+    cowpaths:detach(App)
 
 ###Check Configuration
 Returns the configuration as it is passed to Cowboy.
 
-    httpaths:get_paths().
+    cowpaths:get_paths().
 
 Build
 -----
