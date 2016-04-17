@@ -1,11 +1,11 @@
 %%%-------------------------------------------------------------------
-%% @doc httpaths public API
+%% @doc cowpaths public API
 %% @end
 %%%-------------------------------------------------------------------
--module(httpaths_app).
+-module(cowpaths_app).
 -behaviour(application).
 
--include("httpaths.hrl").
+-include("cowpaths.hrl").
 
 %% Application callbacks
 -export([start/2, stop/1]).
@@ -15,17 +15,18 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-	ets:new(?HTTPATHS_ROUTES,  [public, named_table]),
-	ets:new(?HTTPATHS_SOCKETS, [public, named_table]),
+	ets:new(?COWPATHS_PATHS,   [public, named_table]),
+	ets:new(?COWPATHS_ROUTES,  [public, named_table]),
+	ets:new(?COWPATHS_SOCKETS, [public, named_table]),
 
 	%% Start app    
-    Res = httpaths_sup:start_link(),
+    Res = cowpaths_sup:start_link(),
     %% Start configured sockets
     lists:foreach(
 		fun(Config) ->
-			httpaths:listen(Config)
+			cowpaths:listen(Config)
 		end,
-		application:get_env(httpaths, sockets, [])
+		application:get_env(cowpaths, sockets, [])
 	),
     Res.
 

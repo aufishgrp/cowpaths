@@ -1,8 +1,8 @@
-{application, httpaths, [
-	{description, "An OTP application"},
+{application, cowpaths, [
+	{description, "Cowboy configuration manager"},
 	{vsn, "0.1.0"},
 	{registered, []},
-	{mod, { httpaths_app, []}},
+	{mod, {cowpaths_app, []}},
 	{applications, [
 		kernel,
 		stdlib,

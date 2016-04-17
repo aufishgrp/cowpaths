@@ -1,9 +1,8 @@
 %%%-------------------------------------------------------------------
-%% @doc httpaths top level supervisor.
+%% @doc cowpaths top level supervisor.
 %% @end
 %%%-------------------------------------------------------------------
-
--module(httpaths_sup).
+-module(cowpaths_sup).
 
 -behaviour(supervisor).
 
@@ -36,20 +35,20 @@ init([]) ->
 
 	Children = [
 		#{
-			id       => httpaths_proc,
-			start    => {httpaths_proc, start_link, []},
+			id       => cowpaths_manager,
+			start    => {cowpaths_manager, start_link, []},
 			restart  => permanent,
 			shutdown => 5000,
 			type     => worker,
-			modules  => [httpaths_proc]
+			modules  => [cowpaths_manager]
 		},
 		#{
-			id       => httpaths_socket_sup,
-			start    => {httpaths_socket_sup, start_link, []},
+			id       => cowpaths_socket_sup,
+			start    => {cowpaths_socket_sup, start_link, []},
 			restart  => permanent,
 			shutdown => 5000,
 			type     => supervisor,
-			modules  => [httpaths_socket_sup]	
+			modules  => [cowpaths_socket_sup]	
 		}
 	],
 

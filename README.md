@@ -2,7 +2,7 @@
 
 Application that manages configuration of Cowboy.
 
-Allows multiple applications to use a socket(s) without steppig on each others toes. An understanding of how Cowboy routes requests is necessary for understanding httpaths. You should review the documentation here first http://ninenines.eu/docs/en/cowboy/1.0/guide/routing/
+Allows multiple applications to use a socket(s) without steppig on each others toes.
 
 ##Usage
 Start the application.
@@ -30,40 +30,27 @@ Start the application.
 Attach a HostTable to a series of sockets.
 
     App = any() :: A unique term used to identify routes within the aplication.
-    RouteTable = #{
-        sockets => all | [integer()] :: The sockets that should handle these specified routes. 
-                                        Specified either as a list of port numbers, or the atom 
-                                        all if all existing sockets should listen. No default.
-        routes  => HostTable         :: No default.
-    }
-    HostTable = #{
-        HostMatch => {PathTable, Constraints} | PathTable
-    } :: Remapping of the Cowboy HostSpec.
-         [{HostMatch, Constraints, PathsList} | {HostMatch, PathsList}] -> 
-         #{HostMatch -> {PathTable, Constraints} | PathTable}
-    PathTable = #{
-        PathMatch -> {Handler, Opts} | {Handler, Opts, Constraints}
-    } :: Remapping of the Cowboy PathsList.
-         [{PathMatch, Handler, Opts} | {PathMatch, Constraints, Handler, Opts}] ->
-         #{PathMatch -> {Handler, Opts} | {Handler, Opts, Constraints}}
-    
-    httpaths:attach(App, RouteTable).
+    Sockets = [integer()] | all :: A list of ints corresponding to the ports that have been bound by
+                                   calling cowpaths:socket(SocketSpec) or the atom all. If all is passed
+                                   the rules are applied to all 
+    Routes = [] :: Cowboy routes as described here: http://ninenines.eu/docs/en/cowboy/1.0/guide/routing/
+    httpaths:attach(App, Sockets, Routes).
     
 RouteTables are maintained on a per socket basis.
     
 Each time attach is called the provided RouteTable is merged into the existing RouteTable for the sockets specified. As attached is called, the HostMatch constraints specified are merged into the sockets existing HostMatch constraints.
     
-Within a socket/HostMatch pairing PathMatch specs must be unique. In the event that a specified PathMatch already exists attach will return {error, {"Duplicate path spec", AttachingApp, AttachedApp}}
+Within a socket/HostMatch pairing PathMatch specs must be unique. In the event that a specified PathMatch already exists attach will return {error, {"Path exists", PathMatch}}
 
 ###Detach from a socket
-Removes all Paths for App from all sockets.
+Removes all Routes for App from all sockets.
 
     httpaths:detach(App)
 
 ###Check Configuration
 Returns the configuration as it is passed to Cowboy.
 
-    httpaths:check_paths().
+    httpaths:get_paths().
 
 Build
 -----

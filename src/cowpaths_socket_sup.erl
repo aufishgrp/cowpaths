@@ -1,7 +1,7 @@
--module(httpaths_socket_sup).
+-module(cowpaths_socket_sup).
 -behavior(supervisor).
 
--include("httpaths.hrl").
+-include("cowpaths.hrl").
 
 %% Supervisor exports
 -export([init/1]).
@@ -26,12 +26,12 @@ init(_) ->
 			},
 			[
 			    #{
-			    	id       => httpaths_socket_sup,
-     				start    => {httpaths_socket_sup, start_socket, []},
+			    	id       => cowpaths_socket_sup,
+     				start    => {cowpaths_socket_sup, start_socket, []},
      				restart  => permanent,
      				shutdown => 1000,
      				type     => worker,
-     				modules  => [httpaths_socket_sup]
+     				modules  => [cowpaths_socket_sup]
      			}
 			]
 		}
@@ -40,9 +40,9 @@ init(_) ->
 %%%%%%%%%%%%%%%%%%%%%%%%
 %% API Implementation %%
 %%%%%%%%%%%%%%%%%%%%%%%%
-start_link()     -> supervisor:start_link({local, ?HTTPATHS_SOCKET_SUP}, ?MODULE, []).
+start_link()     -> supervisor:start_link({local, ?COWPATHS_SOCKET_SUP}, ?MODULE, []).
 
-add_socket(Args) -> supervisor:start_child(?HTTPATHS_SOCKET_SUP, Args).
+add_socket(Args) -> supervisor:start_child(?COWPATHS_SOCKET_SUP, Args).
 
 start_socket(#{
 	port             := Port,
