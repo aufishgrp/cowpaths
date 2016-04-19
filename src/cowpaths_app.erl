@@ -28,6 +28,13 @@ start(_StartType, _StartArgs) ->
 		end,
 		application:get_env(cowpaths, sockets, [])
 	),
+    case application:get_env(cowpaths, swagger, undefined) of
+    	undefined ->
+    		ok;
+    	Port ->
+    		{ok, _} = cowpaths:socket(#{port => Port}),
+    		ok = cowpaths:attach(cowpaths_swagger, [Port], [cowboy_swagger_handler])
+    end,
     Res.
 
 %%--------------------------------------------------------------------
