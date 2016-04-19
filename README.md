@@ -33,12 +33,14 @@ Attach a HostTable to a series of sockets.
     Sockets = [integer()] | all :: A list of ints corresponding to the ports that have been bound by
                                    calling cowpaths:socket(SocketSpec) or the atom all. If all is passed
                                    the rules are applied to all 
-    Routes = [] :: Cowboy routes as described here: http://ninenines.eu/docs/en/cowboy/1.0/guide/routing/
+    Routes = [] :: Cowboy routes as described here: http://ninenines.eu/docs/en/cowboy/1.0/guide/routing/ |
+                   Trails or atom() that refer to modules that export trails/0 as described here:
+                       https://github.com/inaka/cowboy-trails
     cowpaths:attach(App, Sockets, Routes).
     
-RouteTables are maintained on a per socket basis.
+Routes are maintained on a per socket basis.
     
-Each time attach is called the provided RouteTable is merged into the existing RouteTable for the sockets specified. As attached is called, the HostMatch constraints specified are merged into the sockets existing HostMatch constraints.
+Each time attach is called the provided Routes are merged into the existing Routes for the sockets specified. As attached is called, the HostMatch constraints specified are merged into the sockets existing HostMatch constraints.
     
 Within a socket/HostMatch pairing PathMatch specs must be unique. In the event that a specified PathMatch already exists attach will return {error, {"Path exists", PathMatch}}
 
