@@ -2,12 +2,12 @@
 
 Application that manages configuration of Cowboy.
 
-Allows multiple applications to use a socket(s) without steppig on each others toes.
+Allows multiple applications to use a socket(s) without stepping on each others toes.
 
 ##Usage
 Start the application.
     
-    applicaiton:start(cowpaths).
+    application:start(cowpaths).
     
 ###Create a socket to listen for requests
 
