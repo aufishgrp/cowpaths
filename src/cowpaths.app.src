@@ -6,7 +6,10 @@
 	{applications, [
 		kernel,
 		stdlib,
-		cowboy
+		cowboy,
+		jiffy,
+		trails,
+		cowboy_swagger
 	]},
 	{env,[]},
 	{modules, []},
