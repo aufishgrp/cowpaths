@@ -8,12 +8,16 @@
 %% API
 -export([attach/3, detach/1, socket/1, get_paths/0]).
 
--spec attach(App :: atom(), Sockets :: [] | all, RouteTable :: []) -> ok.
+%% Trails
+-export([trails/0]).
+
+-spec attach(App :: atom(), Sockets :: [] | all, Routes :: []) -> ok.
 %% @doc Updates the routes table with the specified Routes for App.
 %%      If the app has previously attached the existing rules are overwritten.
 %% @end
-attach(App, Sockets, RouteTable) ->
-	cowpaths_manager:attach(App, Sockets, RouteTable).
+attach(App, Sockets, Routes) ->
+	Routes2 = standardize_routes(Routes),
+	cowpaths_manager:attach(App, Sockets, Routes2).
 
 -spec detach(Routes :: []) -> ok.
 %% @doc Removes the routes table with the specified routes.
@@ -44,6 +48,37 @@ socket(Spec) ->
 -spec get_paths() -> [].
 get_paths() ->
 	cowpaths_manager:get_paths().
+
+%%====================================================================
+%% Internal functions
+%%====================================================================
+standardize_routes(Routes) ->
+	lists:flatten(lists:map(fun standardize_route/1, Routes)).
+
+%% Standard cowboy host
+standardize_route({HostMatch, Pathslist}) ->
+	{HostMatch, standardize_paths(Pathslist)};
+%% Trails allows for "easy" config for a single server
+%% Allow this for trails and cowboy specs
+standardize_route(Path = {_,_,_}) ->
+	{'_', [Path]};
+standardize_route(Path = {_,_,_,_}) ->
+	{'_', [Path]};
+standardize_route(Path) when is_map(Path) ->
+	{'_', [Path]};
+standardize_route(Path) when is_atom(Path) ->
+	standardize_routes(trails:trails([Path])).
+
+standardize_paths(Pathslist) ->
+	lists:flatten(lists:map(fun standardize_path/1, Pathslist)).
+
+%% Standard cowboy paths
+standardize_path(P = {_, _, _})    -> P;
+standardize_path(P = {_, _, _, _}) -> P;
+%% Trail spec
+standardize_path(P) when is_map(P) -> P;
+%% Trail module
+standardize_path(P) when is_atom(P) -> standardize_paths(trails:trails([P])).
 
 %%====================================================================
 %% Unit Test functions
@@ -161,7 +196,45 @@ detach_multi_test() ->
 	ok = cowpaths:attach(detach2, [9001], Routes2),
 	ok = cowpaths:detach(detach1).
 
+trails() ->
+	Metadata = #{
+		get => #{
+			tags => ["example"],
+			description => "Example description.",
+			produces => ["text/plain"]
+		}
+	},
+	[trails:trail("/description", trails_handler, [], Metadata)].
 
+trails2() ->
+	Metadata = #{
+		get => #{
+			tags => ["example"],
+			description => "Example description.",
+			produces => ["text/plain"]
+		}
+	},
+	[trails:trail("/description", trails_handler, [], Metadata)].
+
+trails3() ->
+	Metadata = #{
+		get => #{
+			tags => ["example"],
+			description => "Example description.",
+			produces => ["text/plain"]
+		}
+	},
+	[trails:trail("/description", trails_handler, [], Metadata), {"/path5", handler, []}].
+
+trails_test() ->
+	%% Validate assigning to all sockets
+	application:set_env(cowpaths, swagger, 9000),
+	start(),
+	_  = cowpaths:socket(#{port => 9000}),
+	_  = cowpaths:socket(#{port => 9001}),
+	ok = cowpaths:attach(trails_test, all, [cowpaths]),
+	ok = cowpaths:attach(trails_test, all, trails2()),
+	ok = cowpaths:attach(trails_test, all, trails3()).
 
 
 
