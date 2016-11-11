@@ -24,7 +24,7 @@ start(_StartType, _StartArgs) ->
     %% Start configured sockets
     lists:foreach(
 		fun(Config) ->
-			cowpaths:listen(Config)
+			ok = valid_socket(cowpaths:socket(Config))
 		end,
 		application:get_env(cowpaths, sockets, [])
 	),
@@ -32,7 +32,7 @@ start(_StartType, _StartArgs) ->
     	undefined ->
     		ok;
     	Port ->
-    		{ok, _} = cowpaths:socket(#{port => Port}),
+    		ok = valid_socket(cowpaths:socket(#{port => Port})),
     		ok = cowpaths:attach(cowpaths_swagger, [Port], [cowboy_swagger_handler])
     end,
     Res.
@@ -44,3 +44,6 @@ stop(_State) ->
 %%====================================================================
 %% Internal functions
 %%====================================================================
+valid_socket(ok)          -> ok;
+valid_socket({exists, _}) -> ok;
+valid_socket(X)           -> X.

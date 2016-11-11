@@ -7,7 +7,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0, attach/3, detach/1, socket/1, get_paths/0]).
+-export([start_link/0, attach/4, detach/1, sockets/2, get_paths/0]).
 
 %% GenServer callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2, code_change/3]).
@@ -24,16 +24,16 @@
 %% @end
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec attach(term(), any | [], []) -> ok | {error, term()}.
-attach(App, Sockets, Routes) ->
-	gen_server:call(?MODULE, {attach, App, Sockets, Routes}).
+-spec attach(term(), cowpath_types:sockets(), cowpath_types:cowpath() | cowpaths_types:cowpaths()) -> ok | {error, term()}.
+attach(App, SocketIds, Trails, Cowboy) ->
+	gen_server:call(?MODULE, {attach, App, SocketIds, Trails, Cowboy}).
 
 -spec detach(term()) -> ok | {error, term()}.
 detach(App) ->
 	gen_server:call(?MODULE, {detach, App}).
 
--spec socket(#{}) -> ok | {error, term()}.
-socket(SocketSpec) -> gen_server:call(?MODULE, {socket, SocketSpec}).
+-spec sockets(term(), list(#{})) -> {ok, list(integer)} | {error, term()}.
+sockets(App, SocketSpecs) -> gen_server:call(?MODULE, {sockets, App, SocketSpecs}).
 
 -spec get_paths() -> term().
 get_paths() -> gen_server:call(?MODULE, {inspect}).
@@ -48,19 +48,14 @@ init(_) ->
 	{ok, #cowpaths_manager{}}.
 
 -spec handle_call(term(), gen_spec:from(), #cowpaths_manager{}) -> gen_spec:gs_call_res(#cowpaths_manager{}).
-handle_call({socket, SocketSpec}, _From, State) ->
-	Socket = case lookup_socket(maps:get(port, SocketSpec)) of
-		no_exists ->
-			create_socket(SocketSpec);
-		Else -> 
-			Else
-	end,
-	{reply, Socket, State};
+handle_call({sockets, SocketSpecs}, _From, State) ->
+	Res = create_sockets(SocketSpecs),
+	{reply, Res, State};
 
-handle_call({attach, App, Sockets, Routes0}, _From, State) ->
+handle_call({attach, App, SocketIds, Trails, Cowboy}, _From, State) ->
 	try
-		Routes1        = trails:compile(Routes0),
-		SocketRoutes1  = get_socket_tables(Sockets),
+		Routes1        = cowboy_router:compile(Cowboy),
+		SocketRoutes1  = get_socket_tables(SocketIds),
 		SocketRoutes2  = lists:map(
 			fun({Socket, Routes2}) ->
 				{Socket, update_routes(Routes1, Routes2)}
@@ -75,8 +70,8 @@ handle_call({attach, App, Sockets, Routes0}, _From, State) ->
 			end,
 			SocketRoutes2
 		),
-		trails:store(Routes0),
-		ets:insert(?COWPATHS_PATHS, {App, Sockets, Routes1}),
+		trails:store(Trails),
+		ets:insert(?COWPATHS_PATHS, {App, SocketIds, Routes1}),
 		{reply, ok, State}
 	catch
 		error:Or ->
@@ -134,19 +129,27 @@ code_change(Old, State, Extra) -> cowpaths_manager_revisions:migrate(Old, State,
 %%====================================================================
 lookup_socket(Port) ->
 	case ets:lookup(?COWPATHS_SOCKETS, Port) of
-		[] -> no_exists;
-		[{Port, Socket}] ->{exists, Socket}
+		[] ->
+			no_exists;
+		[{Port, Socket, _}] ->
+			{exists, Socket}
 	end.
 
-create_socket(SocketSpec) ->
+create_sockets(App, [SocketSpec | SocketSpecs]) ->
+	Socket = case lookup_socket(maps:get(port, SocketSpec)) of
+		no_exists ->
+			create_socket(App, SocketSpec);
+		Else -> 
+			Else
+	end,
+
+create_socket(App, SocketSpec) ->
 	case cowpaths_socket_sup:start_socket(SocketSpec) of
 		{ok, Socket} ->
 			ets:insert(?COWPATHS_SOCKETS, {maps:get(port, SocketSpec), Socket}),
 			{ok, Socket}
 	end.
 
-get_socket_tables(all)     ->
-	get_socket_tables(ets:select(?COWPATHS_SOCKETS, [{{'$1', '_'}, [], ['$1']}]));
 get_socket_tables(Sockets) ->
 	lists:map(
 		fun(Socket) ->
