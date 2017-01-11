@@ -30,88 +30,38 @@ attach(App, Cowpaths) ->
 detach(App) ->
 	cowpaths_manager:detach(App).
 
--spec get_paths() -> [].
+-spec get_paths() -> cowpaths_types:paths().
 get_paths() ->
-	cowpaths_manager:get_paths().
+	get_paths(all).
+
+-spec get_paths(all | atom()) -> cowpaths_types:paths().
+get_paths(App) ->
+	cowpaths_manager:get_paths(App).
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
+join([], Acc) -> Acc;
+join([Cowpath | Cowpaths], Acc) ->
+	join(Cowpaths, [Cowpath | Acc]).
+
+-spec expand(cowpaths_types:cowpaths()) -> list(cowpaths_types:cowpath()).
 expand(Cowpaths) ->
-	lists:flatten(lists:map(
+	lists:foldl(
 		fun
-			(Cowpath) when is_atom(Cowpath) ->
-				Cowpath:cowpaths();
-			(Cowpath) ->
-				Cowpath
+			(Cowpath, Acc) when is_atom(Cowpath) ->
+				join(expand(Cowpath:cowpaths()), Acc);
+			(Cowpath, Acc) ->
+				[Cowpath | Acc]
 		end,
+		[],
 		Cowpaths
 	)).
 
--spec parse_cowpaths(cowpaths_types:cowpaths()) -> list().
-parse_cowpaths(Cowpaths) ->
-	Cowpaths1 = expand(Cowpaths),
-	lists:map(fun parse_cowpath/1, Cowpaths1).
 
--spec parse_cowpath(cowpaths_types:cowpath() | module()) -> list().
-parse_cowpath(Cowpath) when is_map(Cowpath) ->
-	Sockets      = parse_sockets(maps:get(sockets, Cowpath, undefined)),
-	Hosts        = parse_hosts(maps:get(hosts, Cowpath, undefined)),
-	Constraints  = parse_constraints(maps:get(constraints, Cowpath, undefined)),
-	Trails       = parse_trails(maps:get(paths, Cowpath, undefined)),
-	Cowboy       = trails_to_cowboy(Trails),
 
-	TrailRoutes  = lists:map(
-		fun(Host) ->
-			{Host, Trails}
-		end,
-		case Hosts of '_' -> ['_']; _ -> Hosts end
-	),
 
-	CowboyRoutes = lists:map(
-		fun(Host) ->
-			{Host, Constraints, Cowboy}
-		end,
-		case Hosts of '_' -> ['_']; _ -> Hosts end
-	),
 
-	{Sockets, TrailRoutes, CowboyRoutes}.
-
--spec parse_sockets(cowpaths_types:sockets()) -> cowpaths_types:sockets().
-parse_sockets(all)       -> all;
-parse_sockets(Sockets)   ->
-	lists:map(fun parse_socket/1, Sockets).
-
--spec parse_socket(cowpaths_types:socketspec()) -> cowpaths_types:socket().
-parse_socket(Int) when is_integer(Int) ->
-	Socket = socket_defaults(),
-	Socket#{
-		port => Int
-	};
-parse_socket(Map) when is_map(Map) ->
-	lists:foldl(fun update_socket/2, socket_defaults(), maps:to_list(Map)).
-
-update_socket({port, Value}, Socket) when is_integer(Value) ->
-	Socket#{port => Value};
-update_socket({protocol, Value}, Socket) when Value =:= http orelse Value =:= https orelse
-                                              Value =:= spdy orelse Value =:= tls ->
-	Socket#{protocol => Value};
-update_socket({workers, Value}, Socket) when is_integer(Value) andalso Value > 0 ->
-	Socket#{workers => Value};
-update_socket({protocol_options, Value}, Socket) when is_list(Value) ->
-	Socket#{protocol_options => Value};
-update_socket({socket_options, Value}, Socket) when is_list(Value) ->
-	Socket#{socket_options => Value};
-update_socket(Option, _) ->
-	erlang:error(invalid_config_value, [Option]).
-
-socket_defaults() ->
-	#{
-		protocol         => http,
-		workers          => 50,
-		protocol_options => [],
-		socket_options   => []
-	}.
 
 -spec parse_hosts(cowpaths_types:hostspecs()) -> cowpaths_types:hosts().
 parse_hosts('_')   -> '_';
@@ -186,94 +136,4 @@ listen_and_attach(App, [{Sockets, Trails, Cowboy} | Specs]) ->
 %%====================================================================
 %% Unit Test functions
 %%====================================================================
-
-socket_parse_test() ->
-	#{
-		port             := 80,
-		protocol         := http,
-		workers          := 50,
-		protocol_options := [],
-		socket_options   := []
-	} = A = parse_socket(80),
-
-	[A, A] = parse_sockets([80, 80]),
-
-	[#{
-		port             := 8001,
-		protocol         := https,
-		workers          := 5000,
-		protocol_options := [option1],
-		socket_options   := [options1]
-	}] = parse_sockets([
-		#{
-			port             => 8001,
-			protocol         => https,
-			workers          => 5000,
-			protocol_options => [option1],
-			socket_options   => [options1]
-		}
-	]),
-	[#{
-		port             := 8001,
-		protocol         := http,
-		workers          := 50,
-		protocol_options := [],
-		socket_options   := []
-	}] = parse_sockets([
-		#{
-			port => 8001
-		}
-	]).
-
-host_parse_test() ->
-	'_' = parse_hosts('_'),
-	'_' = parse_hosts(all),
-	["Match1", "Match2"] = parse_hosts(["Match1", "Match2"]).
-
-cowpaths_to_trails_test() ->
-	Path1 = #{
-path_match  => "/match1/option1",
-constraints => [{"match1", int}],
-handler     => handler1,
-options     => [],
-metadata    => #{}
-},
-
-	Cowpath1 = #{
-		sockets     => all,
-		hosts       => all,
-		constraints => [],
-		paths       => [
-			Path1
-		]
-	},
-
-	Cowpath2 = #{
-		sockets     => all,
-		hosts       => all,
-		constraints => [{"hello", int}],
-		paths       => [
-			Path1
-		]
-	},
-
-	[{_, Trails, Cowboy}] = parse_cowpaths([Cowpath1]),
-
-	A = trails:compile(Trails),
-	B = cowboy_router:compile(Cowboy),
-	A = B,
-	{A, B},
-
-	[{_, Trails2, Cowboy2}] = parse_cowpaths([Cowpath2]),
-
-	io:format("Trails\n~p\nCowboy\n~p\n", [Trails2, cowboy_router:compile(Cowboy2)]),
-
-	[
-		{H1,[{"hello", int}],P1}
-	] = cowboy_router:compile(Cowboy2),
-	[
-		{H1,_,P1}
-	] = trails:compile(Trails2),
-
-	{A, B}.
 

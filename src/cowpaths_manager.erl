@@ -24,7 +24,7 @@
 %% @end
 start_link() -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
--spec attach(term(), cowpath_types:sockets(), cowpath_types:cowpath() | cowpaths_types:cowpaths()) -> ok | {error, term()}.
+-spec attach(term(), cowpath_types:sockets(), cowpath_types:cowpath() | cowpaths_types:cowpaths(), term()) -> ok | {error, term()}.
 attach(App, SocketIds, Trails, Cowboy) ->
 	gen_server:call(?MODULE, {attach, App, SocketIds, Trails, Cowboy}).
 
@@ -48,8 +48,8 @@ init(_) ->
 	{ok, #cowpaths_manager{}}.
 
 -spec handle_call(term(), gen_spec:from(), #cowpaths_manager{}) -> gen_spec:gs_call_res(#cowpaths_manager{}).
-handle_call({sockets, SocketSpecs}, _From, State) ->
-	Res = create_sockets(SocketSpecs),
+handle_call({sockets, App, SocketSpecs}, _From, State) ->
+	Res = create_sockets(App, SocketSpecs),
 	{reply, Res, State};
 
 handle_call({attach, App, SocketIds, Trails, Cowboy}, _From, State) ->
@@ -135,13 +135,18 @@ lookup_socket(Port) ->
 			{exists, Socket}
 	end.
 
-create_sockets(App, [SocketSpec | SocketSpecs]) ->
-	Socket = case lookup_socket(maps:get(port, SocketSpec)) of
-		no_exists ->
-			create_socket(App, SocketSpec);
-		Else -> 
-			Else
-	end,
+create_sockets(App, SocketSpecs) ->
+	lists:map(
+		fun(SocketSpec) ->
+			case lookup_socket(maps:get(port, SocketSpec)) of
+				no_exists ->
+					create_socket(App, SocketSpec);
+				Else -> 
+					Else
+			end
+		end,
+		SocketSpecs
+	).
 
 create_socket(App, SocketSpec) ->
 	case cowpaths_socket_sup:start_socket(SocketSpec) of

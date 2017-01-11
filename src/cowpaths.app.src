@@ -2,7 +2,7 @@
 	{description, "Cowboy configuration manager"},
 	{vsn, "0.1.0"},
 	{registered, []},
-	{mod, {cowpaths_app, []}},
+	{mod, {cwpths_app, []}},
 	{applications, [
 		kernel,
 		stdlib,
